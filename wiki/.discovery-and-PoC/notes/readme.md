@@ -1,1 +1,0 @@
-This is where notes relating to the PoC phase will live.
