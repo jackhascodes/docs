@@ -1,0 +1,74 @@
+@startuml
+left to right direction
+package "EventHubs" as EventBusIn <<cloud>>{
+    class "title.updated.success" as TitleUpsert <<(E,lightblue) event>> {
+        type: delta
+    }
+
+    class "inventory.updated.success" as InventoryUpsert <<(E,lightblue) event>>{
+      type: notice
+  }
+}
+
+package Endpoints {
+    package Subscribers {
+        class "InventoryUpsert" as IUpsertSub <<(H,lightgreen) handler>>
+        class "TitleUpsert" as TUpsertSub <<(H,lightgreen) handler>>
+    }
+}
+
+package domain {
+    package useCases {
+        class TitleUpsert <<(U,pink) use case>> {
+            updates title
+            in all regions
+        }
+        class InventoryUpsert <<(U,pink) use case>> {
+            updates title in
+            inventory region
+        }
+    }
+    package Entities {
+        class Title <<(D, yellow) business entity>>
+        class Inventory <<(D, yellow) business entity>>
+    }
+}
+
+package DataProviders {
+    package Cosmos {
+        class Repo <<D, lightgreen>>
+        class Entities <<D, lightgreen>>
+    }
+    package TitleService {
+        class Client <<S, lightgreen>>
+    }
+    package InventoryService {
+        class Client <<S, lightgreen>>
+    }
+}
+
+package CosmosDB <<cloud>> {
+    class "Region1" as TitleInventory <<(T, lightblue)>>
+    class "Region2" <<(T, lightblue)>>
+}
+
+package Kubernetes <<cloud>> {
+    class TitleService <<S, lightblue>>
+    class InventoryService <<S, lightblue>>
+}
+
+EventBusIn.TitleUpsert --> TUpsertSub
+EventBusIn.InventoryUpsert --> IUpsertSub
+
+TUpsertSub --> domain.useCases.TitleUpsert
+IUpsertSub --> domain.useCases.InventoryUpsert
+Cosmos *-l-> CosmosDB
+Repo <-u- domain.useCases.InventoryUpsert: via interface
+Repo <-u- domain.useCases.TitleUpsert: via interface
+DataProviders.InventoryService.Client <-u-* domain.useCases: via interface
+DataProviders.TitleService.Client <-u-* domain.useCases: via interface
+Repo *-l->DataProviders.Cosmos.Entities
+
+DataProviders.InventoryService.Client *--> Kubernetes.InventoryService
+DataProviders.TitleService.Client *--> Kubernetes.TitleService
+@enduml

@@ -1,0 +1,64 @@
+@startuml
+left to right direction
+package "EventHubs" as EventBusIn <<cloud>>{
+    class "availability.access.updated.success" as InventoryUpsert <<(E,lightblue) event>> {
+        type: delta
+    }
+}
+
+package HTTP <<cloud>> {
+    class "GET /client/{libraryRef}" as Get <<(B,lightblue) TCP>>
+}
+package Endpoints {
+    package Subscribers {
+        class "Upsert" as UpsertSub <<(H,lightgreen) handler>>
+    }
+    package Http {
+        class GetClientAccess <<(H,lightgreen) handler>>
+    }
+}
+
+package domain {
+    package useCases {
+        class Upsert <<(U,pink) use case>>
+        class GetClientAccess <<(U,pink) use case>>
+    }
+    package Entities {
+        class InventoryAccess <<(D, yellow) business entity>>
+    }
+}
+
+
+
+
+package DataProviders {
+    package Database {
+        class Repo <<D, lightgreen>>
+        class Entities <<D, lightgreen>>
+        }
+
+    package EventBus {
+        class "inventory-access.updated.success" as InventoryChange <<(E,lightblue) event>>
+    }
+}
+
+package SqlServer <<cloud>> {
+    class InventoryAccess <<(T, lightblue)>>
+}
+
+package EventHubs <<cloud>> {
+}
+
+InventoryUpsert --> UpsertSub
+
+UpsertSub --> Upsert
+Upsert --> DataProviders.EventBus.InventoryChange
+HTTP.Get *--> Endpoints.Http.GetClientAccess
+Endpoints.Http.GetClientAccess *--> domain.useCases.GetClientAccess
+
+Database *--> SqlServer
+Repo <-u-* domain.useCases: via interface
+Repo *-l->DataProviders.Database.Entities
+DataProviders.Database.Entities *--> SqlServer.InventoryAccess
+InventoryChange --> EventHubs
+@enduml

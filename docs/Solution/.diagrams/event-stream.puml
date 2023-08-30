@@ -1,0 +1,72 @@
+@startuml
+left to right direction
+skinparam linetype ortho
+note as Legend
+Legend
+(E) Event
+(S) Service
+end note
+
+class "axis.library.title.upsert" as AxisTitleUpsertEvent <<(E,lightblue) Axis>> {
+    + ISBN: int
+    + LibraryKey: int
+    + AvailableQuantity: int
+    + Audience: string
+    + DateAdded: int
+}
+class "axis.library.title.delete" as DeleteLibraryTitle <<(E,lightblue) Axis>> {
+    + ISBN: int
+    + LibraryKey: int
+}
+class "axis.library.title.quantityChange.success" as AxisCheckinEvent <<(E,lightblue) Axis>> {
+    + ISBN: int
+    + LibraryKey: int
+    + AvailableQuantity: int
+}
+class "axis.library.title.scope.success" as AxisScopeEvent <<(E,lightblue) Axis>> {
+    + ISBN: int
+    + LibraryKey: int
+    + Scoped: bool
+}
+
+class "axis.library.upsert.success" as AxisLibraryUpsertEvent <<(E,lightblue) Axis>> {
+    + LibraryKey: int
+    + RegionKey: int
+}
+class "axis.library.delete.success" as AxisLibraryDeleteEvent <<(E,lightblue) Axis>> {
+    + LibraryKey: int
+}
+
+class "axis.title.upsert.success" as AxisTitleEvent <<(E,lightblue) Axis>> {
+    + ISBN: int
+}
+class "axis.title.delete.success" as DeleteTitleEvent  <<(E,lightblue) Axis>> {
+    + ISBN: int
+}
+
+
+class "search.title.upsert.success" as TitleEvent <<(E,lightblue) Search>>
+class "search.inventory.upsert.success" as InventoryEvent  <<(E,lightblue) Search>>
+class "search-etl" as SearchETL <<(S, lightgreen)>>
+class "inventory-service" as InventoryETL <<(S, lightgreen)>>
+class "title-etl" as TitleETL <<(S, lightgreen)>>
+class AzureCognitiveSearch <<(S, lightgreen)>>
+
+AxisTitleUpsertEvent --> InventoryETL
+DeleteLibraryTitle --> InventoryETL
+AxisCheckinEvent --> InventoryETL
+AxisScopeEvent --> InventoryETL
+
+InventoryETL --> InventoryEvent
+AxisTitleEvent --> TitleETL
+DeleteTitleEvent --> TitleETL
+
+TitleETL --> TitleEvent
+
+AxisLibraryUpsertEvent ----> SearchETL
+AxisLibraryDeleteEvent ----> SearchETL
+
+InventoryEvent --> SearchETL
+TitleEvent --> SearchETL
+SearchETL *..> AzureCognitiveSearch: pull
+@enduml

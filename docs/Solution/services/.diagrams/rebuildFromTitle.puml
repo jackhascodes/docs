@@ -1,0 +1,20 @@
+@startuml
+title Must rebuild all indexes for product on product meta change.
+Prebuild -> GetRegions
+GetRegions -> Prebuild: regionkeys[1,2,3]
+Prebuild -> Rebuild: ProductID (1), regionIDs (1,2,3)
+Rebuild -> GetProduct: ProductID (1)
+GetProduct -> Rebuild: title1
+Rebuild -> GetInventory: productID (1), regionIDs (1,2,3)
+GetInventory -> GetInventory: where product = 1 and region = 1
+GetInventory -> GetInventory: where product = 1 and region = 2
+GetInventory -> GetInventory: where product = 1 and region = 3
+GetInventory -> Rebuild: inventory[[region1],[region2],[region3]]
+Rebuild -> Rebuild: doc1 = [title1 + region1 inventory]
+Rebuild -> Rebuild: doc2 = [title1 + region2 inventory]
+Rebuild -> Rebuild: doc3 = [title1 + region3 inventory]
+Rebuild -> Region1: doc1
+Rebuild -> Region2: doc2
+Rebuild -> Region3: doc3
+@enduml
+

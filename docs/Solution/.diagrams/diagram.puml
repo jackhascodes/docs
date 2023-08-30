@@ -1,0 +1,221 @@
+@startuml
+skinparam linetype ortho
+note as Legend
+Legend
+(E) Event
+(C) Cosmos
+(A) Azure Cognitive Search
+(U) Use Case
+(L) LIUD
+end note
+
+
+package AxisEvents {
+
+    class "axis.library.title.new" as AxisTitleAssignEvent <<(E,lightblue)>> {
+        + ProductID
+        + LibraryKey
+        - AvailableQuantity
+        - Audience
+        - DateAdded
+    }
+    class "axis.library.title.update" as AxisTitleUpdateEvent <<(E,lightblue)>> {
+        + ProductID
+        + LibraryKey
+        - AvailableQuantity
+        - Audience
+        - DateAdded
+    }
+
+    class "axis.library.quantityChange.success" as AxisCheckinEvent <<(E,lightblue)>> {
+        + ProductID
+        + LibraryKey
+        + AvailableQuantity
+    }
+    class "axis.library.scope.success" as AxisScopeEvent <<(E,lightblue)>> {
+        + ProductID
+        + LibraryKey
+        + Scoped: bool
+    }
+    class "axis.library.update" as AxisLibraryUpdateEvent <<(E,lightblue)>> {
+        + RegionKey
+        + LibraryKey
+    }
+    class "axis.library.delete" as AxisLibraryDeleteEvent <<(E,lightblue)>> {
+            + RegionKey
+            + LibraryKey
+        }
+
+    class "axis.title.update.success" as AxisTitleEvent <<(E,lightblue)>> {
+        + ProductID
+    }
+    class deleteTitle  <<(E,lightblue)>> {
+        Consider this
+    }
+    class deleteLibraryTitle <<(E,lightblue)>> {
+        Consider this
+    }
+}
+
+class "search.title.update.success" as TitleEvent <<(E,lightblue)>> {
+    +ProductID
+    +Series
+    +Author
+    +Narrator
+    +SupplierDesc
+    +ImprintDesc
+    +ESupplierLiteral
+    +EFormatLiteral
+    +PubDate
+    +LanguageDesc
+    +BISAC
+    +Genre
+    +AudienceDesc
+    +UpdateDate
+    +Annotation
+    +AvgRating
+    +ReadyToVend
+    +PurchaseOption
+    +Edition
+    +JacketImageInd
+    +SubTitle
+    +ShortTitle
+    +AudioSampleAvailable
+    +AxisAttribute
+    +RunTime
+    +Inventory
+    +PageCount
+    +Lexile
+    +PopularityScore
+}
+class "search.inventory.update.success" as InventoryEvent  <<(E,lightblue)>> {
+    +ProductID
+    +LibraryKey
+    +AudienceCode
+    +DateAdded
+    +Available
+}
+
+package "search-etl" as SearchETL {
+    class "update-inventory" as UpdateInventory <<(U,yellow)>>
+    class "update-product" as UpdateProduct <<(U,yellow)>>
+    class "new-library" as NewLibrary  <<U,yellow)>>
+    class "delete-library" as DeleteLibrary  <<U,yellow)>>
+    class RegionLibraries <<c,lightgreen>> {
+        +LibraryID
+        +RegionID
+        +SearchHost
+    }
+    class Region1 <<(c,lightgreen)>> {
+        product docs w/ lib collection
+    }
+    class Region2 <<(c,lightgreen)>>{
+        product docs w/ lib collection
+    }
+    class Region3 <<(c,lightgreen)>>{
+        product docs w/ lib collection
+    }
+
+    RegionLibraries .> UpdateInventory: used to\nget region
+    NewLibrary --> RegionLibraries
+    DeleteLibrary --> RegionLibraries
+    UpdateInventory --> Region1
+    UpdateProduct --> Region1
+    UpdateProduct --> Region2
+    UpdateProduct --> Region3
+
+
+}
+
+package "inventory-service" as InventoryETL {
+    'class add  <<(U,yellow)>>
+    class quantityChange <<(U,yellow)>>
+    class scope <<(U,yellow)>>
+    class upsertInventory <<(U,yellow)>>
+    class Inventory <<(c,lightgreen)>>
+}
+
+
+package "title-etl" as TitleETL {
+    class "update"  as TitleUpdate <<(U,yellow)>> {
+        Transform from omni,\nforward message
+    }
+    class Omni <<(L,lightgreen)>> {
+
+    }
+    TitleUpdate <. Omni
+}
+
+
+
+package AzureCognitiveSearch {
+    class Index1 <<(A,lightgreen)>>{
+       product docs w/ lib collection
+   }
+    class Index2 <<(A,lightgreen)>>{
+       product docs w/ lib collection
+   }
+    class Index3 <<(A,lightgreen)>>{
+       product docs w/ lib collection
+   }
+}
+
+package SearchMiddleware {
+    class Search <<(U,yellow)>> {
+        transforms OG search\nrequest to ACS request.
+        ..
+        stitches additional data for\ntitle availability into result set.
+    }
+    class Libraries <<(L,lightgreen)>> {
+        +LibraryKey
+        +RegionKey
+        +SearchHost
+    }
+    class Availability  <<(L,lightgreen)>> {
+        +AudienceCode
+        +DateAdded
+        +RecentlyReturnedDate
+        +PopularityScore
+        +IsExcluded
+        +IsOwnedByLibrary
+        +HoldQueueSize
+        +HoldPatrons
+        +CheckoutPatrons
+        +AvailableQuantityUpdatedDate
+        +LicenseUpdatedDate
+        +TotalQuantity
+        +ReservePatrons
+        +OnOrderQuantity
+    }
+    Search <. Libraries
+    Availability -> Search
+}
+
+package Frontend <<Cloud>> {
+}
+
+AxisTitleAssignEvent ---> upsertInventory
+AxisTitleUpdateEvent ---> upsertInventory
+AxisCheckinEvent ---> quantityChange
+AxisScopeEvent ---> scope
+quantityChange --> InventoryEvent
+scope --> InventoryEvent
+upsertInventory --> InventoryEvent
+InventoryEvent --> UpdateInventory
+AxisTitleEvent ---> TitleUpdate
+
+TitleUpdate --> TitleEvent
+TitleEvent -> UpdateProduct
+
+
+Region1 --> Index1: ""
+Region2 --> Index2: ""
+Region3 --> Index3: ""
+
+AxisLibraryUpdateEvent --> NewLibrary
+AxisLibraryDeleteEvent --> DeleteLibrary
+
+SearchMiddleware.Search <-- Frontend
+
+Index1 <-- SearchMiddleware.Search
+@enduml

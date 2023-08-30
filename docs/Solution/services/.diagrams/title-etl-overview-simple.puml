@@ -1,0 +1,73 @@
+@startuml
+left to right direction
+package "EventHubs" as EventBusIn <<cloud>>{
+    class "omni.updated.success" as TitleUpsert <<(E,lightblue) event>> {
+        type: delta
+    }
+
+    class "omni.deleted.success" as TitleDelete <<(E,lightblue) event>>{
+      type: notice
+  }
+}
+
+package HTTP <<cloud>> {
+    class "GET /{productId}" as Get <<(B,lightblue) TCP>>
+}
+package Endpoints {
+    package Subscribers {
+        class "Delete" as DeleteSub <<(H,lightgreen) handler>>
+        class "Upsert" as UpsertSub <<(H,lightgreen) handler>>
+    }
+    package Http {
+        class Get <<(H,lightgreen) handler>>
+    }
+}
+
+package domain {
+    package useCases {
+        class Upsert <<(U,pink) use case>>
+        class Delete <<(U,pink) use case>>
+        class Get <<(U,pink) use case>>
+    }
+    package Entities {
+        class Title <<(D, yellow) business entity>>
+    }
+}
+
+
+
+
+package DataProviders {
+    package Database {
+        class Repo <<D, lightgreen>>
+        class Entities <<D, lightgreen>>
+        }
+
+    package EventBus {
+        class "title.updated.success" as InventoryChange <<(E,lightblue) event>>
+    }
+}
+
+package SqlServer <<cloud>> {
+    class omni <<(T, lightblue)>>
+}
+
+package EventHubs <<cloud>> {
+}
+
+TitleUpsert --> UpsertSub
+TitleDelete --> DeleteSub
+
+UpsertSub --> Upsert
+DeleteSub --> Delete
+Delete ---> DataProviders.EventBus.InventoryChange
+Upsert --> DataProviders.EventBus.InventoryChange
+HTTP.Get *--> Endpoints.Http.Get
+Endpoints.Http.Get *--> domain.useCases.Get
+
+Database *--> SqlServer
+Repo <-u-* domain.useCases: via interface
+Repo *-l->DataProviders.Database.Entities
+DataProviders.Database.Entities *--> SqlServer.omni
+InventoryChange --> EventHubs
+@enduml

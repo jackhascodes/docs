@@ -1,0 +1,77 @@
+@startuml
+'skinparam linetype ortho
+left to right direction
+package Endpoints {
+    package Command {
+        class "run" as Run <<(H,lightgreen)>>
+    }
+    package Http {
+        class "GET /" as Get <<(H,lightgreen)>>
+    }
+}
+
+package domain {
+    package useCases {
+        package Poll {
+            class "UseCase" as PollUseCase <<U,pink>>
+            class JobDTO <<U, pink>> {
+                + topic
+                + ProductID
+                - LibraryID (optional)
+            }
+            class PollRepo <<U, pink>> {
+                + GetOutstanding()
+                + AddToRunLog()
+            }
+
+            PollUseCase <-> PollRepo
+            PollUseCase --> JobDTO
+        }
+        package GetRunLog {
+            class "UseCase" as GetRunLogUseCase <<U,pink>>
+        }
+
+    }
+
+    package Entities {
+        class Event <<(D, yellow)>>
+    }
+}
+
+package Presenters {
+
+    package EventBusOut {
+        class "<entity>.[<field>.]<verb>.[success|fail]" as EventPub <<(E,lightblue)>> {
+            entities:
+            + availability
+            + omni
+        }
+    }
+
+    package HTTPResponse {
+
+        class httpGet <<(B, lightblue)>>
+    }
+}
+
+Run --> domain.useCases.Poll.PollUseCase
+domain.useCases.Poll.JobDTO ..> Presenters.EventBusOut.EventPub
+Endpoints.Http.Get --> domain.useCases.GetRunLog.GetRunLogUseCase
+domain.useCases.GetRunLog --> Presenters.HTTPResponse.httpGet
+
+package DataProviders {
+    class Repo <<D, lightgreen>>
+}
+
+package DB {
+    class event_queue <<(T, lightblue)>>
+    class run_log <<(T, lightblue)>>
+    class StoredProcedures <<(P, lightblue>> {
+        + AutoReserve
+        + AutoReturn
+    }
+    StoredProcedures -u-> event_queue
+}
+DB <--> DataProviders
+DataProviders <-u-> domain.useCases
+@enduml
